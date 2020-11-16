@@ -61,9 +61,15 @@ def main(args, ITE=0):
         print("\nWrong Dataset choice \n")
         exit()
 
-    train_loader = torch.utils.data.DataLoader(traindataset, batch_size=args.batch_size, shuffle=True, num_workers=0,drop_last=False)
+    train_loader = torch.utils.data.DataLoader(traindataset, batch_size=args.batch_size, shuffle=True,
+                                               num_workers=8,
+                                               pin_memory=True if device.type != 'cpu' else False,
+                                               drop_last=False)
     #train_loader = cycle(train_loader)
-    test_loader = torch.utils.data.DataLoader(testdataset, batch_size=args.batch_size, shuffle=False, num_workers=0,drop_last=True)
+    test_loader = torch.utils.data.DataLoader(testdataset, batch_size=args.batch_size, shuffle=False,
+                                              num_workers=8,
+                                              pin_memory=True if device.type != 'cpu' else False,
+                                              drop_last=True)
     
     # Importing Network Architecture
     global model
@@ -78,7 +84,7 @@ def main(args, ITE=0):
     elif args.arch_type == "resnet18":
         model = resnet.resnet18().to(device)   
     elif args.arch_type == "densenet121":
-        model = densenet.densenet121().to(device)   
+        model = densenet.densenet121().to(device)
     # If you want to add extra model paste here
     else:
         print("\nWrong Model choice\n")
@@ -233,7 +239,7 @@ def train(model, train_loader, optimizer, criterion):
     for batch_idx, (imgs, targets) in enumerate(train_loader):
         optimizer.zero_grad()
         #imgs, targets = next(train_loader)
-        imgs, targets = imgs.to(device), targets.to(device)
+        imgs, targets = imgs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
         output = model(imgs)
         train_loss = criterion(output, targets)
         train_loss.backward()
@@ -256,7 +262,7 @@ def test(model, test_loader, criterion):
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
             output = model(data)
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
